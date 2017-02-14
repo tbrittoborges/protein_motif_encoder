@@ -28,13 +28,14 @@ def dataframe_sparse_encoder(data, descriptor=None, col_names=None):
 
      .. note:: descriptor parameters can be any Python object with .get method, as pd.Series.
     """
+    data = data.copy()
     if descriptor is None:
         descriptor = pd.Series(data.values.ravel()).unique()
         descriptor = pd.get_dummies(descriptor)
     elif hasattr(descriptor, 'get'):
         pass
     else:
-        raise(ValueError("descriptor arguments should have be a dict or pandas.Series"))
+        raise (ValueError("descriptor arguments should have be a dict or pandas.Series"))
 
     if col_names is None:
         col_names = ["{}_{}".format(col_name, letter) for letter, col_name in
@@ -48,45 +49,52 @@ def dataframe_sparse_encoder(data, descriptor=None, col_names=None):
     return encoded
 
 
-def dataframe_AAindex_encoder(data, attribute='mean', indices=None):  # aa index
+def dataframe_aaindex_encoder(data, indices=None, contains=None):
     """Encode a DataFrame of Motifs to correspondent AAindex vector
     Total number of descriptors 512
 
-    :param data:
     :param indices:
-    :param attribute: panda DataFrame attribute or None
-    :param motifs_dataframe: Motif DataFrame
-    :return: data shape (original_n_rows, original_n_cols * n_aa_index_features)
+    :param contains:
+    :param data:
+    :return:
 
     :Example:
 
     >>> import pandas as pd
     >>> df = pd.DataFrame(map(list, ['ABC', 'AAA', 'ACD']))
-    >>> print(dataframe_AAindex_encoder(df).iloc[:, 0: 3])
+    >>> print(dataframe_aaindex_encoder(df).iloc[:, 0: 3])
               0         1     2
     0  4.350000  0.610000  1.18
     2  4.586667  0.713333  1.04
 
     .. note:: If you use AAindex please cite one of their references: http://www.genome.jp/aaindex/
-    .. note:: will silently drop rows with non-standard residues symbols
+    .. warning:: Function will silently drop rows with non-standard residues symbols
     .. todo:: select a subset of aa_index
     """
-    data_path = os.path.join(os.path.dirname(__file__), 'aaindex.csv')
-    aa_index = pd.read_csv(data_path, index_col=(0, 1))
-    aa_index = aa_index.T if not indices else aa_index.T.iloc[indices, :]
+    data = data.copy()
+    aa_index_path = os.path.join(os.path.dirname(__file__), 'aaindex.csv')
+    aa_index = pd.read_csv(aa_index_path, index_col=(0, 1))
+    # todo: limit descriptors with regex
+
+    if indices:
+        aa_index = aa_index.T.iloc[indices, :]
+    elif contains:
+        index = aa_index.index.get_level_values('name')
+        mask = index.str.contains(contains, case=False)
+        aa_index = aa_index.loc[mask].T
+    else:
+        aa_index = aa_index.T
 
     result = []
     for i in aa_index:
         to_replace = aa_index.loc[:, i]
         replaced = data.replace(to_replace)
         # if attribute is none return full replaced df.
-        result.append(getattr(replaced, attribute)(axis=1) if attribute else replaced)
+        result.append(replaced)
 
     encoded = pd.concat(result, axis=1)
-    if attribute is None:
-        pos = range(data.shape[1]) * aa_index.shape[1]
-        encoded.columns = ['{}_{}'.format(a, b) for a, b in
-                           izip_longest(aa_index.columns, pos, fillvalue=aa_index.columns)]
-    else:
-        encoded.columns = aa_index.columns
+    pos = range(data.shape[1]) * aa_index.shape[1]
+    encoded.columns = ['{}_{}'.format(a, b) for a, b in
+                       izip_longest(aa_index.columns, pos, fillvalue=aa_index.columns)]
+
     return encoded
