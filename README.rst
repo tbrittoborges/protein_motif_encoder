@@ -18,7 +18,7 @@ protein_motif_encoder
      :alt: Updates
 
 
-Python tools for encoding protein motif  sequence for machine learning
+Python tools for encoding protein motif sequence for machine learning.
 
 
 * Free software: MIT license
@@ -33,8 +33,13 @@ Features
 Credits
 ---------
 
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+
+The project relies extensively in `Pandas`_ and other
+
+This package structure was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_
+project template.
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+.. _Pandas: http://pandas.pydata.org/
 
