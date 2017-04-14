@@ -18,8 +18,9 @@ protein_motif_encoder
      :alt: Updates
 
 
-Python tools for encoding protein motif sequence for machine learning.
-
+Set of encoding strategies for protein motifs sequences training with machine learning. Future
+    work aims to review and compare the different strategies with various machine learning
+        implementations.
 
 * Free software: MIT license
 * Documentation: https://protein-motif-encoder.readthedocs.io.
@@ -28,7 +29,8 @@ Python tools for encoding protein motif sequence for machine learning.
 Features
 --------
 
-* TODO
+* Encodes motif sequences based on various strategies
+* Starting point for something bigger!
 
 Credits
 ---------
