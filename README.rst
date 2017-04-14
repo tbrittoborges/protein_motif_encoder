@@ -1,6 +1,6 @@
-===============================
+=====================
 protein_motif_encoder
-===============================
+=====================
 
 
 .. image:: https://img.shields.io/pypi/v/protein_motif_encoder.svg
@@ -33,15 +33,13 @@ Features
 * Starting point for something bigger!
 
 Credits
----------
+-------
 
+This work was idealised by Thiago Britto Borges. The project relies extensively on `Pandas`_
+DataFrame implementation and Cookiecutter_ project template.
 
-The project relies extensively in `Pandas`_ and other
-
-This package structure was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_
-project template.
+Use GitHub issue tracker for ideas, criticism and collaborations!
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
 .. _Pandas: http://pandas.pydata.org/
 
