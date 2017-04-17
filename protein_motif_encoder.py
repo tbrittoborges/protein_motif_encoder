@@ -3,7 +3,7 @@
 Set of encoding strategies for protein motifs sequences training with machine learning.
 """
 import os
-from itertools import product, izip_longest
+from itertools import product, izip_longest, islice, repeat
 
 import pandas as pd
 
@@ -122,7 +122,73 @@ def dataframe_aaindex_encoder(data, contains=None, named_columns=False):
     return encoded
 
 
+def window(seq, n=2):
+    """
+    Returns a sliding window (of width n) over data from the iterable
+    s -> (s0,s1,...s[n-1]), (s1,s2,...,sn), ...
+    :param seq: sequence to by cutted 
+    :type seq:  array-like or str
+    :param n: motif size 
+    :return iterator: 
+
+    ..note:
+    modified from https://docs.python.org/release/2.3.5/lib/itertools-example.html
+    """
+    it = iter(seq)
+    result = tuple(islice(it, n))
+    if len(result) == n:
+        yield "".join(result)
+    for elem in it:
+        result = result[1:] + (elem,)
+        yield "".join(result)
+
+
+def k_mer_composition(data, k=3, alphabet=None):
+    """
+    Return the k-mer composition for each sample (row) in the data.
+
+    :param motif_df: motif in the format one residue per column
+    :type motif_df: pandas.DataFrame
+    :param k: length of the kmer
+    :type k: int
+    :param alphabet: all amino acids
+    :type alphabet: str
+    :return: matrix with counts of k-mer
+    
+    :Example:
+    >>> import pandas as pd; df = pd.DataFrame(map(list, ['ABC', 'AAA', 'ACD'])) 
+    >>> print(k_mer_composition(df, k=1))  # doctest: +NORMALIZE_WHITESPACE
+        A_comp    B_comp    C_comp    D_comp
+    0  0.333333  0.333333  0.333333  0.000000
+    1  1.000000  0.000000  0.000000  0.000000
+    2  0.333333  0.000000  0.333333  0.333333
+    >>> print(k_mer_composition(df, k=2).iloc[:, :3])  # doctest: +NORMALIZE_WHITESPACE
+        AA_comp   AB_comp   AC_comp
+    0  0.000000  0.333333  0.000000
+    1  0.666667  0.000000  0.000000
+    2  0.000000  0.000000  0.333333
+"""
+    if k == 1: # amino acid composition
+        aa_comp = data.apply(pd.value_counts, axis=1).fillna(0)
+        aa_comp /= data.shape[1]
+        aa_comp.columns = aa_comp.columns + "_comp"
+
+        return aa_comp
+
+    if alphabet is None:
+        alphabet = "".join(pd.unique(data.unstack().values))
+
+    k_mers = data.apply(lambda x: list(window(x, n=k)), axis=1)
+    k_mers = k_mers.apply(pd.value_counts)
+
+    all_kmers = ["".join(aa) for aa in product(*repeat(list(alphabet), k))]
+    k_mers = k_mers.loc[:, all_kmers].fillna(0)
+    k_mers /= data.shape[1]
+    k_mers.columns = k_mers.columns + "_comp"
+
+    return k_mers
+
+
 if __name__ == "__main__":
     import doctest
-
     doctest.testmod(verbose=True, optionflags=doctest.ELLIPSIS)

@@ -17,10 +17,9 @@ protein_motif_encoder
      :target: https://pyup.io/repos/github/tbrittoborges/protein_motif_encoder/
      :alt: Updates
 
-
 Set of encoding strategies for protein motifs sequences training with machine learning. Future
-    work aims to review and compare the different strategies with various machine learning
-        implementations.
+work aims to review and compare the different strategies with various machine learning
+    implementations.
 
 * Free software: MIT license
 * Documentation: https://protein-motif-encoder.readthedocs.io.
