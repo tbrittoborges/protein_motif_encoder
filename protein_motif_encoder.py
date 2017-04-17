@@ -6,8 +6,84 @@ import os
 from itertools import product, izip_longest, islice, repeat
 
 import pandas as pd
+from Bio import SeqIO
 
-__all__ = ['dataframe_sparse_encoder', 'dataframe_aaindex_encoder ']
+__all__ = ['read_fasta', 'dataframe_sparse_encoder', 'dataframe_aaindex_encoder', 'window',
+           'dataframe_k_mer_composition']
+
+
+def read_fasta(fasta_file):
+    """
+    Parses a fasta file with BioPython to a dictionary 
+    
+    :param fasta_file: input file in the fasta format 
+    :return dict: dictionary with [identifier, sequence] from the input file 
+    """
+    with open(fasta_file) as open_input:
+        seqs = SeqIO.to_dict(SeqIO.parse(open_input, 'fasta'),
+                             key_function=lambda x: x.id.split()[0])
+    return seqs
+
+
+def read_positions(positions_file, columns=None):
+    """
+    Position for motifs within the protein sequences.
+
+    :param positions_file: csv file with the positions
+    :param array-like columns: columns with identifier and position, respectively 
+    :return dict : 
+    """
+    if columns is None:
+        columns = [0, 1]
+    data = pd.read_csv(positions_file)
+    try:
+        data = data.loc[:, columns]
+    except KeyError:  # named columns
+        data = data.iloc[:, columns]
+
+    return data.to_records()
+
+
+def create_motifs_from_residues(sequence, motif_size=5, residues=['S', 'T'], extremity='X'):
+    """
+    Fragments the proteins in modifiable peptides.
+    :param str sequence: protein sequence
+    :param int motif_size: number of residues per motif
+    :param srt extremity: character symbol for termination character
+    :param array_like residues: residues' position within the protein sequences
+    :rtype : Iterator of position collection.Iterable[tuple]
+    
+    .. example:
+    >>> print(list(create_motifs_from_residues('VTIQHPWFKRTLGP'))) # doctest: +NORMALIZE_WHITESPACE
+    [(2, 'XVTIQ'), (11, 'KRTLG')]    
+    """
+    if len(extremity) > 1:
+        extremity = extremity[0]
+    if isinstance(residues, str):
+        residues = [residues,]
+    elif not hasattr(residues, "__contains__"):
+        raise TypeError("residue paramenter should be a list-like object")
+
+    if motif_size & 1:  # is odd
+        start = motif_size // 2
+        stop = (motif_size // 2) + 1
+    else:
+        start = motif_size // 2
+        stop = start
+
+    protein_len = len(sequence)
+    for i, aa in enumerate(sequence):
+        if aa in residues:
+            if i - start < 0:
+                motif = sequence[0: i].rjust(start, extremity) + sequence[i: i + stop]
+            elif i + stop > protein_len:
+                motif = sequence[i - start: i] + sequence[i: i + stop].ljust(stop, extremity)
+            else:
+                motif = sequence[i - start: i + stop]
+
+            yield i + 1, motif
+
+
 
 
 def dataframe_sparse_encoder(data, descriptor=None, col_names=None):
@@ -24,7 +100,7 @@ def dataframe_sparse_encoder(data, descriptor=None, col_names=None):
     :raise ValueError: if the descriptor argument lack `get` method
 
 
-    :Example:
+    .. example:
 
         >>> import pandas as pd
         >>> df = pd.DataFrame(map(list, ['ABC', 'AAA', 'ACD']))
@@ -143,7 +219,7 @@ def window(seq, n=2):
         yield "".join(result)
 
 
-def k_mer_composition(data, k=3, alphabet=None):
+def dataframe_k_mer_composition(data, k=3, alphabet=None):
     """
     Return the k-mer composition for each sample (row) in the data.
 
@@ -157,18 +233,18 @@ def k_mer_composition(data, k=3, alphabet=None):
     
     :Example:
     >>> import pandas as pd; df = pd.DataFrame(map(list, ['ABC', 'AAA', 'ACD'])) 
-    >>> print(k_mer_composition(df, k=1))  # doctest: +NORMALIZE_WHITESPACE
+    >>> print(dataframe_k_mer_composition(df, k=1))  # doctest: +NORMALIZE_WHITESPACE
         A_comp    B_comp    C_comp    D_comp
     0  0.333333  0.333333  0.333333  0.000000
     1  1.000000  0.000000  0.000000  0.000000
     2  0.333333  0.000000  0.333333  0.333333
-    >>> print(k_mer_composition(df, k=2).iloc[:, :3])  # doctest: +NORMALIZE_WHITESPACE
+    >>> print(dataframe_k_mer_composition(df, k=2).iloc[:, :3])  # doctest: +NORMALIZE_WHITESPACE
         AA_comp   AB_comp   AC_comp
     0  0.000000  0.333333  0.000000
     1  0.666667  0.000000  0.000000
     2  0.000000  0.000000  0.333333
 """
-    if k == 1: # amino acid composition
+    if k == 1:  # amino acid composition
         aa_comp = data.apply(pd.value_counts, axis=1).fillna(0)
         aa_comp /= data.shape[1]
         aa_comp.columns = aa_comp.columns + "_comp"
@@ -191,4 +267,5 @@ def k_mer_composition(data, k=3, alphabet=None):
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod(verbose=True, optionflags=doctest.ELLIPSIS)
