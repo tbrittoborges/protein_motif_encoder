@@ -3,26 +3,29 @@
 Set of encoding strategies for protein motifs sequences training with machine learning.
 """
 import os
-from itertools import product, izip_longest, islice, repeat
+from itertools import product, islice, repeat
 
 import pandas as pd
 from Bio import SeqIO
+from future.utils import iteritems, itervalues
 
-__all__ = ['read_fasta', 'dataframe_sparse_encoder', 'dataframe_aaindex_encoder', 'window',
-           'dataframe_k_mer_composition']
+__all__ = ['read_fasta', 'read_positions', 'create_motifs_from_residues',
+           'dataframe_sparse_encoder',  'dataframe_aaindex_encoder', 'window',
+           'dataframe_k_mer_composition', 'built_motif_dataframe', 'protein_motif_encoder']
 
 
-def read_fasta(fasta_file):
+def read_fasta(sequence_file):
     """
     Parses a fasta file with BioPython to a dictionary 
     
-    :param fasta_file: input file in the fasta format 
+    :param sequence_file: input file in the fasta format 
     :return dict: dictionary with [identifier, sequence] from the input file 
     """
-    with open(fasta_file) as open_input:
+    with open(sequence_file) as open_input:
         seqs = SeqIO.to_dict(SeqIO.parse(open_input, 'fasta'),
                              key_function=lambda x: x.id.split()[0])
-    return seqs
+
+    return  {k: str(v.seq) for k, v in seqs.iteritems()}
 
 
 def read_positions(positions_file, columns=None):
@@ -41,7 +44,7 @@ def read_positions(positions_file, columns=None):
     except KeyError:  # named columns
         data = data.iloc[:, columns]
 
-    return data.to_records()
+    return data.set
 
 
 def create_motifs_from_residues(sequence, motif_size=5, residues=None, extremity='X'):
@@ -101,7 +104,7 @@ def built_motif_dataframe(sequences, **kwargs):
     :return pandas.DataFrame: Motif DataFrame
     """
     positions, motifs, identifiers = [], [], []
-    for identifier, sequence in sequences:
+    for identifier, sequence in iteritems(sequences):
         positions_i, motifs_i = create_motifs_from_residues(sequence, **kwargs)
         identifiers += [identifier] * len(motifs_i)
         positions.extend(positions_i)
@@ -111,7 +114,8 @@ def built_motif_dataframe(sequences, **kwargs):
 
 
 def dataframe_sparse_encoder(data, descriptor=None, col_names=None):
-    """Sparsely encode the motifs with abstract descriptor. Similar to 'one-hot' encoding that 
+    """
+    Sparsely encode the motifs with abstract descriptor. Similar to 'one-hot' encoding that 
     is consistent across the motif columns.
 
     :param descriptor: dict-like descriptor to be applied to the columns
@@ -158,7 +162,8 @@ def dataframe_sparse_encoder(data, descriptor=None, col_names=None):
 
 
 def dataframe_aaindex_encoder(data, contains=None, named_columns=False):
-    """Encode the motifs with an a DataFrame of Motifs to correspondent AAindex vector
+    """
+    Encode the motifs with an a DataFrame of Motifs to correspondent AAindex vector
     Total number of descriptors 512.
 
     :param pd.DataFrame data: DataFrame with categorical data
@@ -267,7 +272,7 @@ def dataframe_k_mer_composition(data, k=3, alphabet=None):
     0  0.000000  0.333333  0.000000
     1  0.666667  0.000000  0.000000
     2  0.000000  0.000000  0.333333
-"""
+    """
     if k == 1:  # amino acid composition
         aa_comp = data.apply(pd.value_counts, axis=1).fillna(0)
         aa_comp /= data.shape[1]
@@ -288,6 +293,23 @@ def dataframe_k_mer_composition(data, k=3, alphabet=None):
 
     return k_mers
 
+
+def protein_motif_encoder(sequence_file, positions_file, **kwargs):
+    sequences = read_fasta(sequence_file)
+
+    if "columns" in kwargs:
+        columns = kwargs.pop('columns')
+    else:
+        columns = None
+    positions = read_positions(positions_file, columns)
+
+    data = built_motif_dataframe(sequences, **kwargs)
+    p_as_index = positions.set_index(positions.columns[:2].tolist()) # this a hack to use pd.isin
+    labels = data.index.isin(p_as_index)
+    data['labelled'] = labels
+    data['labelled'].fillna(False) # not labelled in the csv file
+
+    return data
 
 if __name__ == "__main__":
     import doctest
