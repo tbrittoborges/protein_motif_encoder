@@ -44,23 +44,25 @@ def read_positions(positions_file, columns=None):
     return data.to_records()
 
 
-def create_motifs_from_residues(sequence, motif_size=5, residues=['S', 'T'], extremity='X'):
+def create_motifs_from_residues(sequence, motif_size=5, residues=None, extremity='X'):
     """
-    Fragments the proteins in modifiable peptides.
+    Fragments the proteins in motifs centred to certain residues.
     :param str sequence: protein sequence
     :param int motif_size: number of residues per motif
     :param srt extremity: character symbol for termination character
-    :param array_like residues: residues' position within the protein sequences
-    :rtype : Iterator of position collection.Iterable[tuple]
-    
+    :param array-like residues: residues' position within the protein sequences
+    :rtype tuple[list, list]; list of positions and motifs, respectively
+
     .. example:
     >>> print(list(create_motifs_from_residues('VTIQHPWFKRTLGP'))) # doctest: +NORMALIZE_WHITESPACE
     [(2, 'XVTIQ'), (11, 'KRTLG')]    
     """
+    if residues is None:
+        residues = ['S', 'T']
     if len(extremity) > 1:
         extremity = extremity[0]
     if isinstance(residues, str):
-        residues = [residues,]
+        residues = [residues, ]
     elif not hasattr(residues, "__contains__"):
         raise TypeError("residue paramenter should be a list-like object")
 
@@ -72,6 +74,8 @@ def create_motifs_from_residues(sequence, motif_size=5, residues=['S', 'T'], ext
         stop = start
 
     protein_len = len(sequence)
+    positions = []
+    motifs = []
     for i, aa in enumerate(sequence):
         if aa in residues:
             if i - start < 0:
@@ -80,10 +84,30 @@ def create_motifs_from_residues(sequence, motif_size=5, residues=['S', 'T'], ext
                 motif = sequence[i - start: i] + sequence[i: i + stop].ljust(stop, extremity)
             else:
                 motif = sequence[i - start: i + stop]
+            positions.append(i + 1)
+            motifs.append(motif)
 
-            yield i + 1, motif
+    return positions, motifs
 
 
+def built_motif_dataframe(sequences, **kwargs):
+    """
+    Transform a list of strings to a Motif DataFrame. Motif length should be consistent. 
+    Downstream arguments can be passed as keyword arguments. Each columns in a Motif DataFrame 
+    is a motif position and each row is an motif instance - position within the protein 
+    sequence.    
+
+    :param array-like sequences: list of protein sequences 
+    :return pandas.DataFrame: Motif DataFrame
+    """
+    positions, motifs, identifiers = [], [], []
+    for identifier, sequence in sequences:
+        positions_i, motifs_i = create_motifs_from_residues(sequence, **kwargs)
+        identifiers += [identifier] * len(motifs_i)
+        positions.extend(positions_i)
+        motifs.extend(motifs_i)
+
+    return pd.DataFrame([list(m) for m in motifs], index=[identifiers, positions])
 
 
 def dataframe_sparse_encoder(data, descriptor=None, col_names=None):
