@@ -1,2 +1,3 @@
 pandas>=0.19.1
 Biopython>=1.6
+future

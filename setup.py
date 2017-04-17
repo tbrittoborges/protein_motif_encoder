@@ -11,7 +11,9 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'Click>=6.0',
-    # TODO: put package requirements here
+    'future',
+    'pandas>=0.19.1',
+    'Biopython>=1.6'
 ]
 
 test_requirements = [

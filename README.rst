@@ -1,4 +1,3 @@
-# coding=utf-8
 =====================
 protein_motif_encoder
 =====================
@@ -21,8 +20,7 @@ Set of encoding strategies for protein motifs sequences for machine learning. Fu
 
 
 * Free software: MIT license
-* Documentation: TBA
-..https://protein-motif-encoder.readthedocs.io.
+* Documentation: TBA .. https://protein-motif-encoder.readthedocs.io.
 
 
 Features
