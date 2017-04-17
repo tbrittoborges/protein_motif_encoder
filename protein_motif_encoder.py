@@ -10,7 +10,7 @@ from Bio import SeqIO
 from future.utils import iteritems, itervalues
 
 __all__ = ['read_fasta', 'read_positions', 'create_motifs_from_residues',
-           'dataframe_sparse_encoder',  'dataframe_aaindex_encoder', 'window',
+           'dataframe_sparse_encoder', 'dataframe_aaindex_encoder', 'window',
            'dataframe_k_mer_composition', 'built_motif_dataframe', 'protein_motif_encoder']
 
 
@@ -25,7 +25,7 @@ def read_fasta(sequence_file):
         seqs = SeqIO.to_dict(SeqIO.parse(open_input, 'fasta'),
                              key_function=lambda x: x.id.split()[0])
 
-    return  {k: str(v.seq) for k, v in seqs.iteritems()}
+    return {k: str(v.seq) for k, v in seqs.iteritems()}
 
 
 def read_positions(positions_file, columns=None):
@@ -44,7 +44,7 @@ def read_positions(positions_file, columns=None):
     except KeyError:  # named columns
         data = data.iloc[:, columns]
 
-    return data.set
+    return data
 
 
 def create_motifs_from_residues(sequence, motif_size=5, residues=None, extremity='X'):
@@ -281,7 +281,7 @@ def dataframe_k_mer_composition(data, k=3, alphabet=None):
         return aa_comp
 
     if alphabet is None:
-        alphabet = "".join(pd.unique(data.unstack().values))
+        alphabet = "".join(data.head().stack().unique())
 
     k_mers = data.apply(lambda x: list(window(x, n=k)), axis=1)
     k_mers = k_mers.apply(pd.value_counts)
@@ -294,24 +294,39 @@ def dataframe_k_mer_composition(data, k=3, alphabet=None):
     return k_mers
 
 
-def protein_motif_encoder(sequence_file, positions_file, **kwargs):
+def protein_motif_encoder(sequence_file, positions_file, enc_strategies=None, **kwargs):
     sequences = read_fasta(sequence_file)
 
     if "columns" in kwargs:
         columns = kwargs.pop('columns')
     else:
         columns = None
+
+    if enc_strategies is None:
+        # TODO fix problem with dataframe_k_mer_composition
+        enc_strategies = [dataframe_sparse_encoder, dataframe_aaindex_encoder]
+
     positions = read_positions(positions_file, columns)
 
     data = built_motif_dataframe(sequences, **kwargs)
-    p_as_index = positions.set_index(positions.columns[:2].tolist()) # this a hack to use pd.isin
-    labels = data.index.isin(p_as_index)
+
+    temp = []
+    for enc_fun in enc_strategies:
+        temp.append(enc_fun(data))  # TODO function parameters can be changed by passing lambda
+    del data
+    data = pd.concat(temp, axis=1)
+
+    # label
+    p_as_index = positions.set_index(positions.columns[:2].tolist())  # hack to use pd.isin
+    labels = data.index.isin(p_as_index.index)
     data['labelled'] = labels
-    data['labelled'].fillna(False) # not labelled in the csv file
+    data['labelled'].fillna(False)  # not labelled in the csv file
 
     return data
+
 
 if __name__ == "__main__":
     import doctest
 
     doctest.testmod(verbose=True, optionflags=doctest.ELLIPSIS)
+

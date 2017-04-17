@@ -20,7 +20,8 @@ Set of encoding strategies for protein motifs sequences for machine learning. Fu
 
 
 * Free software: MIT license
-* Documentation: TBA .. https://protein-motif-encoder.readthedocs.io.
+* Documentation: TBA
+.. https://protein-motif-encoder.readthedocs.io.
 
 
 Features
@@ -33,7 +34,7 @@ Credits
 -------
 
 This work was idealised by Thiago Britto Borges. The project relies extensively on `Pandas`_
-DataFrame implementation and Cookiecutter_ project template.
+DataFrame and Cookiecutter_ project template.
 
 Use GitHub issue tracker for ideas, criticism and collaborations!
 
